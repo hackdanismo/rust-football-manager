@@ -1,0 +1,29 @@
+# Rust build output
+/target/
+
+# Cargo lockfile
+# Keep this ignored only if you're building a library.
+# For an application/game, you should normally COMMIT Cargo.lock.
+# Cargo.lock
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local environment/config
+.env
+.env.*
+
+# Game saves / generated local data
+/saves/
+/logs/
+
+# Temporary files
+*.tmp
+*.bak
