@@ -1,3 +1,5 @@
+use rand::random_range;
+
 use crate::models::{
     club::Club,
     fixture::Fixture,
@@ -18,9 +20,11 @@ pub struct GameState {
 impl GameState {
     pub fn new() -> Self {
         let mut club = Club::new(1, "Eastleigh Town");
-        let club_two = Club::new(2, "Winchester City");
-        let club_three = Club::new(3, "Southampton Athletics");
-        let club_four = Club::new(4, "Hampshire Rovers");
+        let mut club_two = Club::new(2, "Winchester City");
+        let mut club_three = Club::new(3, "Southampton Athletics");
+        let mut club_four = Club::new(4, "Hampshire Rovers");
+
+        // Eastleigh Town
 
         club.add_player(Player::new(
             1,
@@ -64,6 +68,144 @@ impl GameState {
             78,
             28,
             76,
+        ));
+
+        // Winchester City
+
+        club_two.add_player(Player::new(
+            5,
+            "Daniel Foster",
+            30,
+            Position::Goalkeeper,
+            38,
+            10,
+            41,
+            46,
+        ));
+
+        club_two.add_player(Player::new(
+            6,
+            "Luke Bennett",
+            26,
+            Position::Defender,
+            52,
+            27,
+            76,
+            61,
+        ));
+
+        club_two.add_player(Player::new(
+            7,
+            "Oliver Price",
+            23,
+            Position::Midfielder,
+            69,
+            58,
+            57,
+            65,
+        ));
+
+        club_two.add_player(Player::new(
+            8,
+            "Charlie Adams",
+            28,
+            Position::Forward,
+            51,
+            73,
+            31,
+            68,
+        ));
+
+        // Southampton Athletics
+
+        club_three.add_player(Player::new(
+            9,
+            "Nathan Green",
+            29,
+            Position::Goalkeeper,
+            45,
+            9,
+            38,
+            48,
+        ));
+
+        club_three.add_player(Player::new(
+            10,
+            "Adam Clarke",
+            25,
+            Position::Defender,
+            61,
+            34,
+            69,
+            72,
+        ));
+
+        club_three.add_player(Player::new(
+            11,
+            "George Wilson",
+            21,
+            Position::Midfielder,
+            78,
+            65,
+            49,
+            77,
+        ));
+
+        club_three.add_player(Player::new(
+            12,
+            "Harry Collins",
+            24,
+            Position::Forward,
+            59,
+            82,
+            25,
+            80,
+        ));
+
+        // Hampshire Rovers
+
+        club_four.add_player(Player::new(
+            13,
+            "Matthew Hill",
+            31,
+            Position::Goalkeeper,
+            40,
+            8,
+            42,
+            44,
+        ));
+
+        club_four.add_player(Player::new(
+            14,
+            "Samuel Cooper",
+            27,
+            Position::Defender,
+            49,
+            25,
+            66,
+            58,
+        ));
+
+        club_four.add_player(Player::new(
+            15,
+            "Thomas Ward",
+            26,
+            Position::Midfielder,
+            65,
+            55,
+            54,
+            62,
+        ));
+
+        club_four.add_player(Player::new(
+            16,
+            "Joseph Bailey",
+            29,
+            Position::Forward,
+            48,
+            68,
+            29,
+            64,
         ));
 
         let clubs = vec![
@@ -113,37 +255,102 @@ impl GameState {
     }
 
     pub fn simulate_next_fixture(&mut self) {
-        let result = {
-            let Some(fixture) = self
-                .fixtures
-                .iter_mut()
-                .find(|fixture| !fixture.played)
-            else {
-                println!("No fixtures left to play.");
-                return;
-            };
+        let Some(fixture_index) = self
+            .fixtures
+            .iter()
+            .position(|fixture| !fixture.played)
+        else {
+            println!("No fixtures left to play.");
+            return;
+        };
 
-            let home_goals = fixture.id % 4;
-            let away_goals = (fixture.id + 1) % 3;
+        let home_club_id =
+            self.fixtures[fixture_index].home_club_id;
+
+        let away_club_id =
+            self.fixtures[fixture_index].away_club_id;
+
+        let home_club = self
+            .clubs
+            .iter()
+            .find(|club| club.id == home_club_id)
+            .expect("Home club not found");
+
+        let away_club = self
+            .clubs
+            .iter()
+            .find(|club| club.id == away_club_id)
+            .expect("Away club not found");
+
+        let home_attack = home_club.attacking_strength();
+        let home_defence = home_club.defensive_strength();
+
+        let away_attack = away_club.attacking_strength();
+        let away_defence = away_club.defensive_strength();
+
+        let home_goals = Self::simulate_goals(
+            home_attack,
+            away_defence,
+            true,
+        );
+
+        let away_goals = Self::simulate_goals(
+            away_attack,
+            home_defence,
+            false,
+        );
+
+        println!();
+        println!(
+            "{} {} - {} {}",
+            home_club.name,
+            home_goals,
+            away_goals,
+            away_club.name,
+        );
+
+        {
+            let fixture = &mut self.fixtures[fixture_index];
 
             fixture.home_goals = Some(home_goals);
             fixture.away_goals = Some(away_goals);
             fixture.played = true;
-
-            (
-                fixture.home_club_id,
-                fixture.away_club_id,
-                home_goals,
-                away_goals,
-            )
-        };
+        }
 
         self.update_league_table(
-            result.0,
-            result.1,
-            result.2,
-            result.3,
+            home_club_id,
+            away_club_id,
+            home_goals,
+            away_goals,
         );
+    }
+
+    fn simulate_goals(
+        attacking_strength: f32,
+        defensive_strength: f32,
+        home_advantage: bool,
+    ) -> u32 {
+        let mut chance =
+            18.0 + (attacking_strength - defensive_strength) * 0.4;
+
+        if home_advantage {
+            chance += 4.0;
+        }
+
+        chance = chance.clamp(7.0, 40.0);
+
+        let mut goals = 0;
+
+        // Each team gets eight potential scoring chances.
+        for _ in 0..8 {
+            let roll: f32 = random_range(0.0..100.0);
+
+            if roll < chance {
+                goals += 1;
+            }
+        }
+
+        goals
     }
 
     fn update_league_table(
@@ -207,7 +414,10 @@ impl GameState {
 
             b.points
                 .cmp(&a.points)
-                .then(b_goal_difference.cmp(&a_goal_difference))
+                .then(
+                    b_goal_difference
+                        .cmp(&a_goal_difference),
+                )
                 .then(b.goals_for.cmp(&a.goals_for))
         });
     }
