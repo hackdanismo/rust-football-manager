@@ -26,6 +26,33 @@ fn show_squad(game: &GameState) {
     }
 }
 
+fn show_league_table(game: &GameState) {
+    println!();
+    println!("{}", game.league.name);
+    println!("=====================================================");
+    println!("Club                      P   W   D   L   GF  GA  PTS");
+
+    for entry in &game.league.table {
+        let club = game
+            .clubs 
+            .iter()
+            .find(|club| club.id == entry.club_id)
+            .expect("Club not found");
+
+        println!(
+            "{:<24} {:>2}  {:>2}  {:>2}  {:>2}  {:>2}  {:>2}  {:>3}",
+            club.name,
+            entry.played,
+            entry.won,
+            entry.drawn,
+            entry.lost,
+            entry.goals_for,
+            entry.goals_against,
+            entry.points,
+        );
+    }
+}
+
 fn main() {
     let mut game = GameState::new();
 
@@ -41,7 +68,8 @@ fn main() {
         println!("1. Continue");
         println!("2. View game state");
         println!("3. View squad");
-        println!("4. Quit");
+        println!("4. View league table");
+        println!("5. Quit");
 
         println!("> ");
         io::stdout().flush().unwrap();
@@ -67,6 +95,10 @@ fn main() {
             }
 
             "4" => {
+                show_league_table(&game);
+            }           
+
+            "5" => {
                 game.quit();
                 println!("Goodbye.");
             }

@@ -1,5 +1,6 @@
 use crate::models::{
     club::Club,
+    league::League,
     player::{Player, Position},
 };
 
@@ -8,12 +9,16 @@ pub struct GameState {
     pub current_day: u32,
     pub season: u32,
     pub running: bool,
+    pub league: League,
     pub clubs: Vec<Club>,
 }
 
 impl GameState {
     pub fn new() -> Self {
         let mut club = Club::new(1, "Eastleigh Town");
+        let mut clubTwo = Club::new(2, "Winchester City");
+        let mut clubThree = Club::new(3, "Southampton Atheletics");
+        let mut clubFour = Club::new(4, "Hampshire Rovers");
 
         club.add_player(Player::new(
             1,
@@ -59,11 +64,16 @@ impl GameState {
             76,
         ));
 
+        let league = League::new(
+            1, "Southern Premier", vec![1, 2, 3, 4],
+        );
+
         Self {
             current_day: 1,
             season: 2026,
             running: true,
-            clubs: vec![club],
+            clubs: vec![club, clubTwo, clubThree, clubFour],
+            league,
         }
     }
 
