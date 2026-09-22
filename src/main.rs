@@ -29,12 +29,12 @@ fn show_squad(game: &GameState) {
 fn show_league_table(game: &GameState) {
     println!();
     println!("{}", game.league.name);
-    println!("=====================================================");
-    println!("Club                      P   W   D   L   GF  GA  PTS");
+    println!("==============================================");
+    println!("Club                     P   W   D   L   GF  GA  Pts");
 
     for entry in &game.league.table {
         let club = game
-            .clubs 
+            .clubs
             .iter()
             .find(|club| club.id == entry.club_id)
             .expect("Club not found");
@@ -50,6 +50,44 @@ fn show_league_table(game: &GameState) {
             entry.goals_against,
             entry.points,
         );
+    }
+}
+
+fn show_fixtures(game: &GameState) {
+    println!();
+    println!("Fixtures");
+    println!("==============================================");
+
+    for fixture in &game.fixtures {
+        let home_club = game
+            .clubs
+            .iter()
+            .find(|club| club.id == fixture.home_club_id)
+            .expect("Home club not found");
+
+        let away_club = game
+            .clubs
+            .iter()
+            .find(|club| club.id == fixture.away_club_id)
+            .expect("Away club not found");
+
+        if fixture.played {
+            println!(
+                "#{:<3} {:<24} {} - {} {}",
+                fixture.id,
+                home_club.name,
+                fixture.home_goals.unwrap_or(0),
+                fixture.away_goals.unwrap_or(0),
+                away_club.name,
+            );
+        } else {
+            println!(
+                "#{:<3} {:<24} vs {}",
+                fixture.id,
+                home_club.name,
+                away_club.name,
+            );
+        }
     }
 }
 
@@ -69,9 +107,10 @@ fn main() {
         println!("2. View game state");
         println!("3. View squad");
         println!("4. View league table");
-        println!("5. Quit");
+        println!("5. View fixtures");
+        println!("6. Quit");
 
-        println!("> ");
+        print!("> ");
         io::stdout().flush().unwrap();
 
         let mut input = String::new();
@@ -83,7 +122,7 @@ fn main() {
         match input.trim() {
             "1" => {
                 game.advance_day();
-                println!("Advance to day {}.", game.current_day);
+                println!("Advanced to day {}.", game.current_day);
             }
 
             "2" => {
@@ -96,9 +135,13 @@ fn main() {
 
             "4" => {
                 show_league_table(&game);
-            }           
+            }
 
             "5" => {
+                show_fixtures(&game);
+            }
+
+            "6" => {
                 game.quit();
                 println!("Goodbye.");
             }
