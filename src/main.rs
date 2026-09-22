@@ -29,18 +29,22 @@ fn show_squad(game: &GameState) {
 fn show_league_table(game: &GameState) {
     println!();
     println!("{}", game.league.name);
-    println!("==============================================");
-    println!("Club                     P   W   D   L   GF  GA  Pts");
+    println!("======================================================");
+    println!("Pos Club                     P   W   D   L   GF  GA  GD  Pts");
 
-    for entry in &game.league.table {
+    for (position, entry) in game.league.table.iter().enumerate() {
         let club = game
             .clubs
             .iter()
             .find(|club| club.id == entry.club_id)
             .expect("Club not found");
 
+        let goal_difference =
+            entry.goals_for as i32 - entry.goals_against as i32;
+
         println!(
-            "{:<24} {:>2}  {:>2}  {:>2}  {:>2}  {:>2}  {:>2}  {:>3}",
+            "{:>2}. {:<24} {:>2}  {:>2}  {:>2}  {:>2}  {:>2}  {:>2}  {:>3}  {:>3}",
+            position + 1,
             club.name,
             entry.played,
             entry.won,
@@ -48,6 +52,7 @@ fn show_league_table(game: &GameState) {
             entry.lost,
             entry.goals_for,
             entry.goals_against,
+            goal_difference,
             entry.points,
         );
     }

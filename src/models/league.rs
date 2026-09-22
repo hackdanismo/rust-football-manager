@@ -33,7 +33,11 @@ pub struct League {
 }
 
 impl League {
-    pub fn new(id: u32, name: &str, club_ids: Vec<u32>) -> Self {
+    pub fn new(
+        id: u32,
+        name: &str,
+        club_ids: Vec<u32>,
+    ) -> Self {
         let table = club_ids
             .into_iter()
             .map(LeagueEntry::new)

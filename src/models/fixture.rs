@@ -9,7 +9,11 @@ pub struct Fixture {
 }
 
 impl Fixture {
-    pub fn new(id: u32, home_club_id: u32, away_club_id: u32) -> Self {
+    pub fn new(
+        id: u32,
+        home_club_id: u32,
+        away_club_id: u32,
+    ) -> Self {
         Self {
             id,
             home_club_id,

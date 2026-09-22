@@ -193,6 +193,23 @@ impl GameState {
             self.league.table[home_index].points += 1;
             self.league.table[away_index].points += 1;
         }
+
+        self.sort_league_table();
+    }
+
+    fn sort_league_table(&mut self) {
+        self.league.table.sort_by(|a, b| {
+            let a_goal_difference =
+                a.goals_for as i32 - a.goals_against as i32;
+
+            let b_goal_difference =
+                b.goals_for as i32 - b.goals_against as i32;
+
+            b.points
+                .cmp(&a.points)
+                .then(b_goal_difference.cmp(&a_goal_difference))
+                .then(b.goals_for.cmp(&a.goals_for))
+        });
     }
 
     pub fn advance_day(&mut self) {
