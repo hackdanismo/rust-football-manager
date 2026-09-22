@@ -112,6 +112,89 @@ impl GameState {
         fixtures
     }
 
+    pub fn simulate_next_fixture(&mut self) {
+        let result = {
+            let Some(fixture) = self
+                .fixtures
+                .iter_mut()
+                .find(|fixture| !fixture.played)
+            else {
+                println!("No fixtures left to play.");
+                return;
+            };
+
+            let home_goals = fixture.id % 4;
+            let away_goals = (fixture.id + 1) % 3;
+
+            fixture.home_goals = Some(home_goals);
+            fixture.away_goals = Some(away_goals);
+            fixture.played = true;
+
+            (
+                fixture.home_club_id,
+                fixture.away_club_id,
+                home_goals,
+                away_goals,
+            )
+        };
+
+        self.update_league_table(
+            result.0,
+            result.1,
+            result.2,
+            result.3,
+        );
+    }
+
+    fn update_league_table(
+        &mut self,
+        home_club_id: u32,
+        away_club_id: u32,
+        home_goals: u32,
+        away_goals: u32,
+    ) {
+        let home_index = self
+            .league
+            .table
+            .iter()
+            .position(|entry| entry.club_id == home_club_id)
+            .expect("Home club not found in league table");
+
+        let away_index = self
+            .league
+            .table
+            .iter()
+            .position(|entry| entry.club_id == away_club_id)
+            .expect("Away club not found in league table");
+
+        self.league.table[home_index].played += 1;
+        self.league.table[away_index].played += 1;
+
+        self.league.table[home_index].goals_for += home_goals;
+        self.league.table[home_index].goals_against += away_goals;
+
+        self.league.table[away_index].goals_for += away_goals;
+        self.league.table[away_index].goals_against += home_goals;
+
+        if home_goals > away_goals {
+            self.league.table[home_index].won += 1;
+            self.league.table[away_index].lost += 1;
+
+            self.league.table[home_index].points += 3;
+        } else if away_goals > home_goals {
+            self.league.table[away_index].won += 1;
+            self.league.table[home_index].lost += 1;
+
+            self.league.table[away_index].points += 3;
+        } else {
+            self.league.table[home_index].drawn += 1;
+            self.league.table[away_index].drawn += 1;
+
+            self.league.table[home_index].points += 1;
+            self.league.table[away_index].points += 1;
+        }
+    }
+
     pub fn advance_day(&mut self) {
         self.current_day += 1;
     }

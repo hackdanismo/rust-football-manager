@@ -122,6 +122,8 @@ fn main() {
         match input.trim() {
             "1" => {
                 game.advance_day();
+                game.simulate_next_fixture();
+
                 println!("Advanced to day {}.", game.current_day);
             }
 
