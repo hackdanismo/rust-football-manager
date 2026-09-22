@@ -10,6 +10,7 @@ use crate::models::{
 #[derive(Debug)]
 pub struct GameState {
     pub current_day: u32,
+    pub current_matchday: u32,
     pub season: u32,
     pub running: bool,
     pub fixtures: Vec<Fixture>,
@@ -225,6 +226,7 @@ impl GameState {
 
         Self {
             current_day: 1,
+            current_matchday: 1,
             season: 2026,
             running: true,
             clubs,
@@ -235,94 +237,200 @@ impl GameState {
 
     fn generate_fixtures(clubs: &[Club]) -> Vec<Fixture> {
         let mut fixtures = Vec::new();
+
+        if clubs.len() < 2 {
+            return fixtures;
+        }
+
+        assert!(
+            clubs.len().is_multiple_of(2),
+            "Fixture generator currently requires an even number of clubs"
+        );
+
+        let mut team_ids: Vec<u32> =
+            clubs.iter().map(|club| club.id).collect();
+
+        let team_count = team_ids.len();
+        let rounds = team_count - 1;
+        let matches_per_round = team_count / 2;
+
         let mut fixture_id = 1;
 
-        for home in clubs {
-            for away in clubs {
-                if home.id != away.id {
-                    fixtures.push(Fixture::new(
-                        fixture_id,
-                        home.id,
-                        away.id,
-                    ));
+        // First half of the season.
+        for round in 0..rounds {
+            let matchday = round as u32 + 1;
 
-                    fixture_id += 1;
-                }
+            for index in 0..matches_per_round {
+                let first = team_ids[index];
+                let second = team_ids[team_count - 1 - index];
+
+                let (home_club_id, away_club_id) =
+                    if index == 0 {
+                        if round % 2 == 0 {
+                            (first, second)
+                        } else {
+                            (second, first)
+                        }
+                    } else if round % 2 == 0 {
+                        (second, first)
+                    } else {
+                        (first, second)
+                    };
+
+                fixtures.push(Fixture::new(
+                    fixture_id,
+                    matchday,
+                    home_club_id,
+                    away_club_id,
+                ));
+
+                fixture_id += 1;
             }
+
+            // Keep the first club fixed and rotate the others.
+            let fixed_team = team_ids[0];
+
+            let mut rotating_teams =
+                team_ids[1..].to_vec();
+
+            rotating_teams.rotate_right(1);
+
+            team_ids.clear();
+            team_ids.push(fixed_team);
+            team_ids.extend(rotating_teams);
+        }
+
+        // Second half of the season.
+        // Reverse every first-leg fixture so home becomes away.
+        let first_leg_fixture_count = fixtures.len();
+
+        for index in 0..first_leg_fixture_count {
+            let first_leg = &fixtures[index];
+
+            let matchday =
+                first_leg.matchday + rounds as u32;
+
+            let home_club_id =
+                first_leg.away_club_id;
+
+            let away_club_id =
+                first_leg.home_club_id;
+
+            fixtures.push(Fixture::new(
+                fixture_id,
+                matchday,
+                home_club_id,
+                away_club_id,
+            ));
+
+            fixture_id += 1;
         }
 
         fixtures
     }
 
-    pub fn simulate_next_fixture(&mut self) {
-        let Some(fixture_index) = self
+    pub fn simulate_current_matchday(&mut self) {
+        let fixture_indices: Vec<usize> = self
             .fixtures
             .iter()
-            .position(|fixture| !fixture.played)
-        else {
+            .enumerate()
+            .filter(|(_, fixture)| {
+                fixture.matchday == self.current_matchday
+                    && !fixture.played
+            })
+            .map(|(index, _)| index)
+            .collect();
+
+        if fixture_indices.is_empty() {
             println!("No fixtures left to play.");
             return;
-        };
-
-        let home_club_id =
-            self.fixtures[fixture_index].home_club_id;
-
-        let away_club_id =
-            self.fixtures[fixture_index].away_club_id;
-
-        let home_club = self
-            .clubs
-            .iter()
-            .find(|club| club.id == home_club_id)
-            .expect("Home club not found");
-
-        let away_club = self
-            .clubs
-            .iter()
-            .find(|club| club.id == away_club_id)
-            .expect("Away club not found");
-
-        let home_attack = home_club.attacking_strength();
-        let home_defence = home_club.defensive_strength();
-
-        let away_attack = away_club.attacking_strength();
-        let away_defence = away_club.defensive_strength();
-
-        let home_goals = Self::simulate_goals(
-            home_attack,
-            away_defence,
-            true,
-        );
-
-        let away_goals = Self::simulate_goals(
-            away_attack,
-            home_defence,
-            false,
-        );
-
-        println!();
-        println!(
-            "{} {} - {} {}",
-            home_club.name,
-            home_goals,
-            away_goals,
-            away_club.name,
-        );
-
-        {
-            let fixture = &mut self.fixtures[fixture_index];
-
-            fixture.home_goals = Some(home_goals);
-            fixture.away_goals = Some(away_goals);
-            fixture.played = true;
         }
 
-        self.update_league_table(
-            home_club_id,
-            away_club_id,
-            home_goals,
-            away_goals,
-        );
+        println!();
+        println!("Matchday {}", self.current_matchday);
+        println!("==============================================");
+
+        for fixture_index in fixture_indices {
+            let home_club_id =
+                self.fixtures[fixture_index].home_club_id;
+
+            let away_club_id =
+                self.fixtures[fixture_index].away_club_id;
+
+            let (
+                home_name,
+                home_attack,
+                home_defence,
+            ) = {
+                let home_club = self
+                    .clubs
+                    .iter()
+                    .find(|club| club.id == home_club_id)
+                    .expect("Home club not found");
+
+                (
+                    home_club.name.clone(),
+                    home_club.attacking_strength(),
+                    home_club.defensive_strength(),
+                )
+            };
+
+            let (
+                away_name,
+                away_attack,
+                away_defence,
+            ) = {
+                let away_club = self
+                    .clubs
+                    .iter()
+                    .find(|club| club.id == away_club_id)
+                    .expect("Away club not found");
+
+                (
+                    away_club.name.clone(),
+                    away_club.attacking_strength(),
+                    away_club.defensive_strength(),
+                )
+            };
+
+            let home_goals = Self::simulate_goals(
+                home_attack,
+                away_defence,
+                true,
+            );
+
+            let away_goals = Self::simulate_goals(
+                away_attack,
+                home_defence,
+                false,
+            );
+
+            {
+                let fixture =
+                    &mut self.fixtures[fixture_index];
+
+                fixture.home_goals = Some(home_goals);
+                fixture.away_goals = Some(away_goals);
+                fixture.played = true;
+            }
+
+            self.update_league_table(
+                home_club_id,
+                away_club_id,
+                home_goals,
+                away_goals,
+            );
+
+            println!(
+                "{:<24} {} - {} {}",
+                home_name,
+                home_goals,
+                away_goals,
+                away_name,
+            );
+        }
+
+        self.current_matchday += 1;
     }
 
     fn simulate_goals(
@@ -341,9 +449,9 @@ impl GameState {
 
         let mut goals = 0;
 
-        // Each team gets eight potential scoring chances.
         for _ in 0..8 {
-            let roll: f32 = random_range(0.0..100.0);
+            let roll: f32 =
+                random_range(0.0..100.0);
 
             if roll < chance {
                 goals += 1;
@@ -364,24 +472,38 @@ impl GameState {
             .league
             .table
             .iter()
-            .position(|entry| entry.club_id == home_club_id)
-            .expect("Home club not found in league table");
+            .position(|entry| {
+                entry.club_id == home_club_id
+            })
+            .expect(
+                "Home club not found in league table",
+            );
 
         let away_index = self
             .league
             .table
             .iter()
-            .position(|entry| entry.club_id == away_club_id)
-            .expect("Away club not found in league table");
+            .position(|entry| {
+                entry.club_id == away_club_id
+            })
+            .expect(
+                "Away club not found in league table",
+            );
 
         self.league.table[home_index].played += 1;
         self.league.table[away_index].played += 1;
 
-        self.league.table[home_index].goals_for += home_goals;
-        self.league.table[home_index].goals_against += away_goals;
+        self.league.table[home_index].goals_for +=
+            home_goals;
 
-        self.league.table[away_index].goals_for += away_goals;
-        self.league.table[away_index].goals_against += home_goals;
+        self.league.table[home_index].goals_against +=
+            away_goals;
+
+        self.league.table[away_index].goals_for +=
+            away_goals;
+
+        self.league.table[away_index].goals_against +=
+            home_goals;
 
         if home_goals > away_goals {
             self.league.table[home_index].won += 1;
@@ -407,10 +529,12 @@ impl GameState {
     fn sort_league_table(&mut self) {
         self.league.table.sort_by(|a, b| {
             let a_goal_difference =
-                a.goals_for as i32 - a.goals_against as i32;
+                a.goals_for as i32
+                    - a.goals_against as i32;
 
             let b_goal_difference =
-                b.goals_for as i32 - b.goals_against as i32;
+                b.goals_for as i32
+                    - b.goals_against as i32;
 
             b.points
                 .cmp(&a.points)
@@ -418,7 +542,10 @@ impl GameState {
                     b_goal_difference
                         .cmp(&a_goal_difference),
                 )
-                .then(b.goals_for.cmp(&a.goals_for))
+                .then(
+                    b.goals_for
+                        .cmp(&a.goals_for),
+                )
         });
     }
 

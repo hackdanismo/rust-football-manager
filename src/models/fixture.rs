@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub struct Fixture {
     pub id: u32,
+    pub matchday: u32,
     pub home_club_id: u32,
     pub away_club_id: u32,
     pub played: bool,
@@ -11,11 +12,13 @@ pub struct Fixture {
 impl Fixture {
     pub fn new(
         id: u32,
+        matchday: u32,
         home_club_id: u32,
         away_club_id: u32,
     ) -> Self {
         Self {
             id,
+            matchday,
             home_club_id,
             away_club_id,
             played: false,

@@ -29,10 +29,16 @@ fn show_squad(game: &GameState) {
 fn show_league_table(game: &GameState) {
     println!();
     println!("{}", game.league.name);
-    println!("======================================================");
-    println!("Pos Club                     P   W   D   L   GF  GA  GD  Pts");
+    println!(
+        "======================================================"
+    );
+    println!(
+        "Pos Club                     P   W   D   L   GF  GA  GD  Pts"
+    );
 
-    for (position, entry) in game.league.table.iter().enumerate() {
+    for (position, entry) in
+        game.league.table.iter().enumerate()
+    {
         let club = game
             .clubs
             .iter()
@@ -40,7 +46,8 @@ fn show_league_table(game: &GameState) {
             .expect("Club not found");
 
         let goal_difference =
-            entry.goals_for as i32 - entry.goals_against as i32;
+            entry.goals_for as i32
+                - entry.goals_against as i32;
 
         println!(
             "{:>2}. {:<24} {:>2}  {:>2}  {:>2}  {:>2}  {:>2}  {:>2}  {:>3}  {:>3}",
@@ -61,25 +68,42 @@ fn show_league_table(game: &GameState) {
 fn show_fixtures(game: &GameState) {
     println!();
     println!("Fixtures");
-    println!("==============================================");
+    println!(
+        "=============================================="
+    );
+
+    let mut previous_matchday = 0;
 
     for fixture in &game.fixtures {
+        if fixture.matchday != previous_matchday {
+            println!();
+            println!("Matchday {}", fixture.matchday);
+            println!(
+                "----------------------------------------------"
+            );
+
+            previous_matchday = fixture.matchday;
+        }
+
         let home_club = game
             .clubs
             .iter()
-            .find(|club| club.id == fixture.home_club_id)
+            .find(|club| {
+                club.id == fixture.home_club_id
+            })
             .expect("Home club not found");
 
         let away_club = game
             .clubs
             .iter()
-            .find(|club| club.id == fixture.away_club_id)
+            .find(|club| {
+                club.id == fixture.away_club_id
+            })
             .expect("Away club not found");
 
         if fixture.played {
             println!(
-                "#{:<3} {:<24} {} - {} {}",
-                fixture.id,
+                "{:<24} {} - {} {}",
                 home_club.name,
                 fixture.home_goals.unwrap_or(0),
                 fixture.away_goals.unwrap_or(0),
@@ -87,8 +111,7 @@ fn show_fixtures(game: &GameState) {
             );
         } else {
             println!(
-                "#{:<3} {:<24} vs {}",
-                fixture.id,
+                "{:<24} vs {}",
                 home_club.name,
                 away_club.name,
             );
@@ -106,6 +129,10 @@ fn main() {
         println!();
         println!("Season: {}", game.season);
         println!("Day: {}", game.current_day);
+        println!(
+            "Next matchday: {}",
+            game.current_matchday
+        );
 
         println!();
         println!("1. Continue");
@@ -126,10 +153,13 @@ fn main() {
 
         match input.trim() {
             "1" => {
+                game.simulate_current_matchday();
                 game.advance_day();
-                game.simulate_next_fixture();
 
-                println!("Advanced to day {}.", game.current_day);
+                println!(
+                    "Advanced to day {}.",
+                    game.current_day
+                );
             }
 
             "2" => {
